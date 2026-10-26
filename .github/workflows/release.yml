@@ -1,0 +1,26 @@
+# Publishes @fiscalisto/react to npm when a version tag (v0.1.1) arrives from Fiscalisto's
+# repository (scripts/sdk-release.sh). Trusted publishing: npm checks this workflow's
+# identity, so there's no token. Kept in Fiscalisto's repository (sdk/<lang>/.github): change it there.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@11
+      - run: npm install --no-audit --no-fund
+      - name: The tag is the package's version
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+      - run: npm run build
+      - run: npm publish --access public --provenance
