@@ -48,6 +48,8 @@ export function BotonFacturar({ url }: { url: string }) {
 
 `FiscalistoDialog` hace lo mismo controlado con `open` y `onClose`.
 
+La ventana se acomoda a la pantalla: en un teléfono ocupa toda la pantalla; en una computadora es una caja tan alta como el paso (nunca más que la ventana del navegador), con la factura junto al formulario si la pantalla es ancha. El botón principal se queda abajo, a la vista.
+
 ## Datos fiscales de un cliente
 
 Con `customer_data_request.url` (POST /v1/customer_data_requests) el mismo componente muestra el
