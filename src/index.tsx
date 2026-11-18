@@ -191,8 +191,6 @@ export function FiscalistoDialog({
 		};
 	}, [open, onClose]);
 	if (!open) return null;
-	// With the live invoice, wide enough for it beside the form (folded on a phone).
-	const wide = embed.preview !== false && /\/autofactura\//.test(embed.url);
 	const dark =
 		embed.appearance?.theme === "dark" ||
 		(embed.appearance?.theme !== "light" &&
@@ -223,7 +221,9 @@ export function FiscalistoDialog({
 				style={{
 					position: "relative",
 					width: "100%",
-					maxWidth: wide ? 960 : 480,
+					// One column: the autofactura's invoice folds into a bar with its total (it used to
+					// sit beside the form at 960 px, and the dialog was as tall as the invoice).
+					maxWidth: 520,
 					margin: "auto 0",
 					borderRadius: 16,
 					overflow: "hidden",
