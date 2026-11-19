@@ -230,6 +230,29 @@ export function FiscalistoDialog({
 		wide: embed.preview === false ? false : (content?.wide ?? true),
 		heading: !!heading,
 	});
+	const closeButton = (
+		<button
+			ref={close}
+			type="button"
+			aria-label="Cerrar"
+			onClick={onClose}
+			style={{
+				...(heading
+					? { flex: "none" }
+					: { position: "absolute", top: 10, right: 10, zIndex: 1 }),
+				width: 32,
+				height: 32,
+				border: 0,
+				borderRadius: 999,
+				background: dark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.06)",
+				color: dark ? "#e6efee" : "#333",
+				font: "20px/32px system-ui, sans-serif",
+				cursor: "pointer",
+			}}
+		>
+			×
+		</button>
+	);
 	return (
 		// biome-ignore lint/a11y/useKeyWithClickEvents: Esc closes it (listened on the document); a click outside is the pointer's shortcut.
 		<div
@@ -260,44 +283,42 @@ export function FiscalistoDialog({
 					height: box.full ? "100dvh" : undefined,
 					borderRadius: box.full ? 0 : 16,
 					overflow: "hidden",
-					background: dark ? "#071615" : "#fbfcfc",
+					// The portal page's own background, so a heading bar and the page read as one.
+					background: dark ? "#0d0d0f" : "#ffffff",
 					boxShadow: box.full ? "none" : "0 24px 60px rgba(0,0,0,.25)",
 					transition: "width .15s ease",
 				}}
 			>
-				<button
-					ref={close}
-					type="button"
-					aria-label="Cerrar"
-					onClick={onClose}
-					style={{
-						position: "absolute",
-						top: 10,
-						right: 10,
-						zIndex: 1,
-						width: 32,
-						height: 32,
-						border: 0,
-						borderRadius: 999,
-						background: dark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.06)",
-						color: dark ? "#e6efee" : "#333",
-						font: "20px/32px system-ui, sans-serif",
-						cursor: "pointer",
-					}}
-				>
-					×
-				</button>
-				{heading && (
+				{heading ? (
 					<div
 						style={{
 							flex: "none",
-							padding: "16px 48px 0 20px",
-							font: "600 16px system-ui, sans-serif",
+							display: "flex",
+							alignItems: "center",
+							gap: 12,
+							height: 56,
+							// The title lines up with the page's content: 16 px on a phone, 20 in a box.
+							padding: box.full ? "0 12px 0 16px" : "0 12px 0 20px",
+							borderBottom: `1px solid ${dark ? "rgba(255,255,255,.075)" : "rgba(13,43,41,.09)"}`,
+							font: "600 16px/1.3 system-ui, sans-serif",
 							color: dark ? "#e6efee" : "#111",
 						}}
 					>
-						{heading}
+						<div
+							style={{
+								flex: 1,
+								minWidth: 0,
+								overflow: "hidden",
+								textOverflow: "ellipsis",
+								whiteSpace: "nowrap",
+							}}
+						>
+							{heading}
+						</div>
+						{closeButton}
 					</div>
+				) : (
+					closeButton
 				)}
 				<Frame
 					title={title}
@@ -339,7 +360,7 @@ export function dialogBox(
 ): { full: true } | { full: false; width: number; height: number } {
 	if (screen.width < 640 || screen.height < 520) return { full: true };
 	const side = content.wide !== false && screen.width >= 1024;
-	const room = screen.height - 48 - (content.heading ? 40 : 0);
+	const room = screen.height - 48 - (content.heading ? 56 : 0);
 	const height = Math.min(room, side ? 760 : 820, Math.max(360, content.height ?? 640));
 	return { full: false, width: side ? Math.min(960, screen.width - 48) : 520, height };
 }
