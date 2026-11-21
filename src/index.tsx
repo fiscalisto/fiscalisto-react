@@ -125,6 +125,7 @@ function Frame({
 }) {
 	const ref = useRef<HTMLIFrameElement>(null);
 	const [height, setHeight] = useState(initialHeight);
+	const loading = useLoading();
 	const src = embedUrl(url, {
 		appearance,
 		preview,
@@ -134,16 +135,18 @@ function Frame({
 	});
 	const origin = src.origin;
 	// The latest callbacks, without listening again on every render.
-	const handlers = useRef({ onComplete, onReady, onSize: sized?.onSize });
-	handlers.current = { onComplete, onReady, onSize: sized?.onSize };
+	const handlers = useRef({ onComplete, onReady, onSize: sized?.onSize, ready: loading.ready });
+	handlers.current = { onComplete, onReady, onSize: sized?.onSize, ready: loading.ready };
 
 	useEffect(() => {
 		function onMessage(e: MessageEvent) {
 			if (e.source !== ref.current?.contentWindow || e.origin !== origin) return;
 			const data = e.data as Message | undefined;
 			if (!data || data.fiscalisto !== 1) return;
-			if (data.event === "ready") handlers.current.onReady?.();
-			else if (data.event === "resize") {
+			if (data.event === "ready") {
+				handlers.current.ready();
+				handlers.current.onReady?.();
+			} else if (data.event === "resize") {
 				setHeight(Math.max(200, data.height));
 				handlers.current.onSize?.(data.height, data.wide);
 			} else if (data.event === "completed")
@@ -157,23 +160,163 @@ function Frame({
 		return () => window.removeEventListener("message", onMessage);
 	}, [origin]);
 
-	return (
+	const iframe = (
 		<iframe
 			ref={ref}
 			src={src.toString()}
 			title={title}
 			allow="camera"
 			className={className}
+			onLoad={loading.loaded}
 			style={{
 				display: "block",
 				width: "100%",
 				border: 0,
 				background: "transparent",
-				height: sized ? sized.height : height,
-				transition: "height .15s ease",
-				...style,
+				...(sized ? { flex: 1, minHeight: 0 } : { height, transition: "height .15s ease" }),
+				...(sized ? undefined : style),
 			}}
 		/>
+	);
+	return (
+		<div
+			style={
+				sized
+					? {
+							position: "relative",
+							display: "flex",
+							flexDirection: "column",
+							height: sized.height,
+							...style,
+						}
+					: { position: "relative" }
+			}
+		>
+			{iframe}
+			{loading.show ? (
+				<Skeleton
+					appearance={appearance}
+					fading={loading.fading}
+					onGone={loading.gone}
+				/>
+			) : null}
+		</div>
+	);
+}
+
+/**
+ * While the page loads: nothing for the first 60 ms (a page that is quick, or cached, opens
+ * with no flash), then its skeleton until the page says it is ready (or, for a page that never
+ * says so, a moment after the frame loaded), fading into the page.
+ */
+function useLoading() {
+	const [state, setState] = useState<"wait" | "skeleton" | "fading" | "done">("wait");
+	const ready = useCallback(
+		() => setState((s) => (s === "skeleton" ? "fading" : s === "wait" ? "done" : s)),
+		[],
+	);
+	useEffect(() => {
+		const t = setTimeout(() => setState((s) => (s === "wait" ? "skeleton" : s)), 60);
+		return () => clearTimeout(t);
+	}, []);
+	const fallback = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(
+		() => () => {
+			if (fallback.current) clearTimeout(fallback.current);
+		},
+		[],
+	);
+	const loaded = useCallback(() => {
+		if (fallback.current) clearTimeout(fallback.current);
+		fallback.current = setTimeout(ready, 1500);
+	}, [ready]);
+	const gone = useCallback(() => setState("done"), []);
+	return {
+		show: state === "skeleton" || state === "fading",
+		fading: state === "fading",
+		ready,
+		loaded,
+		gone,
+	};
+}
+
+/** The page's shape (a title, the fields, the button) in its own colors, over the frame. */
+function Skeleton({
+	appearance,
+	fading,
+	onGone,
+}: {
+	appearance?: FiscalistoAppearance;
+	fading: boolean;
+	onGone: () => void;
+}) {
+	const dark = isDark(appearance);
+	const radius =
+		typeof appearance?.radius === "number" && Number.isFinite(appearance.radius)
+			? Math.min(24, Math.max(0, Math.round(appearance.radius)))
+			: 8;
+	const accent = hex(appearance?.accent) ?? "0f766e";
+	const block = (width: number | string, h: number, color?: string): CSSProperties => ({
+		width,
+		height: h,
+		borderRadius: Math.min(radius, h / 2),
+		background: color ?? (dark ? "rgba(255,255,255,.08)" : "rgba(13,43,41,.07)"),
+	});
+	const field = (label: number) => (
+		<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+			<div style={block(label, 12)} />
+			<div style={block("100%", 40)} />
+		</div>
+	);
+	return (
+		<div
+			aria-hidden="true"
+			data-fiscalisto-skeleton=""
+			onTransitionEnd={fading ? onGone : undefined}
+			style={{
+				position: "absolute",
+				inset: 0,
+				overflow: "hidden",
+				background: dark ? "#0d0d0f" : "#ffffff",
+				opacity: fading ? 0 : 1,
+				transition: "opacity .2s ease",
+				pointerEvents: fading ? "none" : "auto",
+			}}
+		>
+			<style>
+				{
+					"@keyframes fiscalisto-pulse{50%{opacity:.55}}@media (prefers-reduced-motion:reduce){[data-fiscalisto-skeleton]>div{animation:none!important}}"
+				}
+			</style>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: 20,
+					maxWidth: 480,
+					padding: 20,
+					animation: "fiscalisto-pulse 1.4s ease-in-out infinite",
+				}}
+			>
+				<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+					<div style={block(220, 22)} />
+					<div style={block("80%", 12)} />
+				</div>
+				{field(120)}
+				{field(160)}
+				{field(90)}
+				<div style={block("100%", 44, `#${accent}`)} />
+			</div>
+		</div>
+	);
+}
+
+function isDark(appearance?: FiscalistoAppearance) {
+	return (
+		appearance?.theme === "dark" ||
+		(appearance?.theme !== "light" &&
+			typeof window !== "undefined" &&
+			!!window.matchMedia?.("(prefers-color-scheme: dark)").matches)
 	);
 }
 
@@ -220,11 +363,7 @@ export function FiscalistoDialog({
 		[],
 	);
 	if (!open) return null;
-	const dark =
-		embed.appearance?.theme === "dark" ||
-		(embed.appearance?.theme !== "light" &&
-			typeof window !== "undefined" &&
-			!!window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+	const dark = isDark(embed.appearance);
 	const box = dialogBox(screen, {
 		height: content?.height,
 		wide: embed.preview === false ? false : (content?.wide ?? true),
