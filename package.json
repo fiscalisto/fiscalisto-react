@@ -1,6 +1,6 @@
 {
 	"name": "@fiscalisto/react",
-	"version": "0.1.150",
+	"version": "0.1.151",
 	"description": "Componentes de React para mostrar en su página la autofactura de Fiscalisto y la liga de datos fiscales de un cliente.",
 	"keywords": [
 		"cfdi",
@@ -33,15 +33,15 @@
 		"LICENSE"
 	],
 	"peerDependencies": {
-		"react": ">=18"
+		"react": "19.2.6"
 	},
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.json",
 		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
-		"@types/react": "^19.2.14",
+		"@types/react": "19.2.14",
 		"react": "^19.2.6",
-		"typescript": "^6.0.2"
+		"typescript": "6.0.3"
 	}
 }
