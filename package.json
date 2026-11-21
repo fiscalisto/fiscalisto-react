@@ -1,6 +1,6 @@
 {
 	"name": "@fiscalisto/react",
-	"version": "0.1.152",
+	"version": "0.1.153",
 	"description": "Componentes de React para mostrar en su página la autofactura de Fiscalisto y la liga de datos fiscales de un cliente.",
 	"keywords": [
 		"cfdi",
